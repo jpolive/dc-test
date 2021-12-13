@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model, Types, startSession } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { Board, BoardDocument } from './schemas/board.schema';
 import { CreateBoardDto } from './dto/create-board.dto';
 import { CreateCardDto } from './dto/create-card.dto';
@@ -105,89 +105,96 @@ export class BoardsService {
   ) {
     const cardToMove = await this.getCardFromBoard(boardId, cardId);
 
-    /*const t1 = */
-    await this.boardModel
-      .updateOne(
-        {
-          _id: boardId,
-          'columns.cards._id': cardId,
-        },
-        {
-          $pull: {
-            'columns.$[].cards': { _id: cardId },
-          },
-        },
-      )
-      .exec();
+    // /*const t1 = */
+    // await this.boardModel
+    //   .updateOne(
+    //     {
+    //       _id: boardId,
+    //       'columns.cards._id': cardId,
+    //     },
+    //     {
+    //       $pull: {
+    //         'columns.$[].cards': { _id: cardId },
+    //       },
+    //     },
+    //   )
+    //   .exec();
+    //
+    // // console.log(t1);
+    //
+    // /*const t2 = */
+    // await this.boardModel
+    //   .updateOne(
+    //     {
+    //       _id: boardId,
+    //       'columns._id': updateCardPositionDto._column,
+    //     },
+    //     {
+    //       $push: {
+    //         'columns.$.cards': {
+    //           $each: [cardToMove],
+    //           $position: updateCardPositionDto.position,
+    //         },
+    //       },
+    //     },
+    //   )
+    //   .exec();
+    //
+    // // console.log(t2);
 
-    // console.log(t1);
+    try {
+      const session = await this.boardModel.db.startSession();
+      session.startTransaction();
 
-    /*const t2 = */
-    await this.boardModel
-      .updateOne(
-        {
-          _id: boardId,
-          'columns._id': updateCardPositionDto._column,
-        },
-        {
-          $push: {
-            'columns.$.cards': {
-              $each: [cardToMove],
-              $position: updateCardPositionDto.position,
+      try {
+        /*const t1 = */
+        await this.boardModel
+          .updateOne(
+            {
+              _id: boardId,
+              'columns.cards._id': cardId,
             },
-          },
-        },
-      )
-      .exec();
+            {
+              $pull: {
+                'columns.$[].cards': { _id: cardId },
+              },
+            },
+          )
+          .session(session)
+          .exec();
 
-    // console.log(t2);
+        // console.log(t1);
 
-    //   try {
-    //     const session = await this.boardModel.db.startSession();
-    //     session.startTransaction();
-    //
-    //     try {
-    //       const t1 = await this.boardModel
-    //         .updateOne(
-    //           {
-    //             _id: boardId,
-    //             'columns.cards._id': cardId,
-    //           },
-    //           {
-    //             $pull: {
-    //               'columns.$[].cards': { _id: cardId },
-    //             },
-    //           },
-    //         )
-    //         .session(session)
-    //         .exec();
-    //
-    //       console.log(t1);
-    //
-    //       const t2 = await this.boardModel
-    //         .updateOne(
-    //           {
-    //             _id: boardId,
-    //             'columns._id': updateCardPositionDto._column,
-    //           },
-    //           {
-    //             $push: {
-    //               'columns.$.cards': cardToMove,
-    //             },
-    //           },
-    //         )
-    //         .session(session)
-    //         .exec();
-    //
-    //       console.log(t2);
-    //     } catch (e) {
-    //       console.log('inner', e);
-    //       await session.abortTransaction();
-    //     } finally {
-    //       await session.endSession();
-    //     }
-    //   } catch (e) {
-    //     console.log(e);
-    //   }
+        /*const t2 = */
+        await this.boardModel
+          .updateOne(
+            {
+              _id: boardId,
+              'columns._id': updateCardPositionDto._column,
+            },
+            {
+              $push: {
+                'columns.$.cards': {
+                  $each: [cardToMove],
+                  $position: updateCardPositionDto.position,
+                },
+              },
+            },
+          )
+          .session(session)
+          .exec();
+
+        // console.log(t2);
+
+        await session.commitTransaction();
+      } catch (e) {
+        console.log('inner', e);
+        await session.abortTransaction();
+      } finally {
+        await session.endSession();
+      }
+    } catch (e) {
+      console.log(e);
+    }
   }
 }

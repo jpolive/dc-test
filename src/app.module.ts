@@ -9,7 +9,8 @@ import { BoardsModule } from './boards/boards.module';
 @Module({
   imports: [
     MongooseModule.forRoot(
-      'mongodb://admin:password@localhost:27017/dc?authSource=admin',
+      // 'mongodb://admin:password@localhost:27017/dc?authSource=admin',
+      'mongodb+srv://<user>:<password>@cluster0.cbqwc.mongodb.net/dc?retryWrites=true&w=majority',
     ),
     UsersModule,
     TeamsModule,
