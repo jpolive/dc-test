@@ -64,6 +64,7 @@ export class BoardsService {
     const result = await this.boardModel.aggregate([
       {
         $match: {
+          _id: new Types.ObjectId(boardId),
           'columns.cards._id': new Types.ObjectId(cardId),
         },
       },
@@ -103,8 +104,8 @@ export class BoardsService {
     cardId: number,
     updateCardPositionDto: UpdateCardPositionDto,
   ) {
-    const cardToMove = await this.getCardFromBoard(boardId, cardId);
-
+    // const cardToMove = await this.getCardFromBoard(boardId, cardId);
+    //
     // /*const t1 = */
     // await this.boardModel
     //   .updateOne(
@@ -147,6 +148,8 @@ export class BoardsService {
       session.startTransaction();
 
       try {
+        const cardToMove = await this.getCardFromBoard(boardId, cardId);
+
         /*const t1 = */
         await this.boardModel
           .updateOne(
