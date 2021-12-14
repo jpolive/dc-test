@@ -150,48 +150,58 @@ export class BoardsService {
       try {
         const cardToMove = await this.getCardFromBoard(boardId, cardId);
 
-        /*const t1 = */
-        await this.boardModel
-          .updateOne(
-            {
-              _id: boardId,
-              'columns.cards._id': cardId,
-            },
-            {
-              $pull: {
-                'columns.$[].cards': { _id: cardId },
+        if (cardToMove) {
+          const pullResult = await this.boardModel
+            .updateOne(
+              {
+                _id: boardId,
+                'columns.cards._id': cardId,
               },
-            },
-          )
-          .session(session)
-          .exec();
-
-        // console.log(t1);
-
-        /*const t2 = */
-        await this.boardModel
-          .updateOne(
-            {
-              _id: boardId,
-              'columns._id': updateCardPositionDto._column,
-            },
-            {
-              $push: {
-                'columns.$.cards': {
-                  $each: [cardToMove],
-                  $position: updateCardPositionDto.position,
+              {
+                $pull: {
+                  'columns.$[].cards': { _id: cardId },
                 },
               },
-            },
-          )
-          .session(session)
-          .exec();
+            )
+            .session(session)
+            .exec();
 
-        // console.log(t2);
+          console.log(pullResult);
 
-        await session.commitTransaction();
+          if (pullResult.modifiedCount !== 1) {
+            await session.abortTransaction();
+            return;
+          }
+
+          const pushResult = await this.boardModel
+            .updateOne(
+              {
+                _id: boardId,
+                'columns._id': updateCardPositionDto._column,
+              },
+              {
+                $push: {
+                  'columns.$.cards': {
+                    $each: [cardToMove],
+                    $position: updateCardPositionDto.position,
+                  },
+                },
+              },
+            )
+            .session(session)
+            .exec();
+
+          console.log(pushResult);
+
+          if (pushResult.modifiedCount !== 1) {
+            await session.abortTransaction();
+            return;
+          }
+
+          await session.commitTransaction();
+        }
       } catch (e) {
-        console.log('inner', e);
+        console.log('Transaction error: ', e);
         await session.abortTransaction();
       } finally {
         await session.endSession();
